@@ -1,0 +1,1 @@
+ALTER TABLE public.product_documents ADD CONSTRAINT product_documents_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;
