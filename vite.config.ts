@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  base: "/Industrial_Shakkel/", // 👈 هذا السطر الجديد الذي يحل مشكلة المسارات في GitHub Pages
   server: {
     host: "::",
     port: 8080,
