@@ -1,8 +1,23 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import fs from "fs";
 import path from "path";
 
 const BASE = "/Industrial_Shakkel/";
+
+/** GitHub Pages serves 404.html for unknown paths; copy index.html so the SPA router can run. */
+function ghPagesSpaFallback(): Plugin {
+  return {
+    name: "gh-pages-spa-fallback",
+    apply: "build",
+    closeBundle() {
+      const index = path.resolve(__dirname, "dist/index.html");
+      if (fs.existsSync(index)) {
+        fs.copyFileSync(index, path.resolve(__dirname, "dist/404.html"));
+      }
+    },
+  };
+}
 
 /** Browsers request /favicon.ico at site root; with a non-root base that 404s in dev. */
 function devFaviconFallback(): Plugin {
@@ -30,7 +45,7 @@ export default defineConfig(() => ({
       overlay: false,
     },
   },
-  plugins: [react(), devFaviconFallback()].filter(Boolean),
+  plugins: [react(), devFaviconFallback(), ghPagesSpaFallback()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

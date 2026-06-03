@@ -53,10 +53,13 @@ const Fallback = () => (
 
 const queryClient = new QueryClient();
 
+/** Must match vite.config `base` (e.g. /Industrial_Shakkel/ on GitHub Pages). */
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <AuthProvider>
           <I18nProvider>
             <QuoteProvider>
