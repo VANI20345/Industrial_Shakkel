@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="48x48" href="/favicon-48.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shakkel — B2B Industrial Catalog & Quotations</title>
+    <meta name="description" content="Shakkel — B2B industrial catalog. Browse products, datasheets, and request quotations instantly." />
+    <script>
+      // Set lang/dir early to avoid flash before React mounts
+      (function () {
+        try {
+          var l = localStorage.getItem('indus_lang') || 'en';
+          document.documentElement.lang = l;
+          document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
