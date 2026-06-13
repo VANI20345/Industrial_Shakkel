@@ -1,7 +1,0 @@
-project_id = "uzeznxduarlvyaatutos"
-
-[functions.send-quote-email]
-verify_jwt = false
-
-[functions.sitemap]
-verify_jwt = false

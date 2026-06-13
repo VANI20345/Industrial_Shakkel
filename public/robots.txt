@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://uzeznxduarlvyaatutos.supabase.co/functions/v1/sitemap
