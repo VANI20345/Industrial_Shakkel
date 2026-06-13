@@ -35,14 +35,8 @@ const About = () => {
         ? "لسنا متجرًا لمرة واحدة. نبني علاقات مع فِرق المشتريات ونتعلّم احتياجاتكم المتكررة."
         : "We're not a one-off shop. We build relationships with procurement teams and learn your recurring needs.",
     },
-    {
-      Icon: Sparkles,
-      title: isAr ? "مشروع جديد، طموح كبير" : "New venture, big ambition",
-      desc: isAr
-        ? "شَكَّل منصة حديثة الانطلاق؛ نُسرّع التطوير بناءً على ملاحظات عملائنا الأوائل."
-        : "Shakkel is a recently-launched platform; we iterate fast based on feedback from our early customers.",
-    },
   ];
+
 
   const steps = [
     {
@@ -97,17 +91,13 @@ const About = () => {
         <div className="absolute inset-0 industrial-grid-bg opacity-10" />
         <div className="container-page py-20 md:py-28 relative">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-xs font-medium mb-5">
-              <Sparkles className="h-3.5 w-3.5" />
-              {isAr ? "منصة جديدة قيد البناء معكم" : "A new platform — building with our customers"}
-            </div>
             <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
               {isAr ? "نُبسّط شراء المستلزمات الصناعية" : "We make industrial procurement simple"}
             </h1>
             <p className="mt-5 text-base md:text-lg text-primary-foreground/85 leading-relaxed">
               {isAr
-                ? "شَكَّل هي منصة B2B سعودية تربط فِرق المشتريات بموردي المنتجات الصناعية، مع كتالوج شفّاف، وعملية تسعير منظمة، وتواصل مباشر مع فريق إنساني — لا روبوتات."
-                : "Shakkel is a Saudi B2B platform connecting procurement teams with industrial suppliers — through a transparent catalog, an organized quotation flow, and direct contact with a real team, not bots."}
+                ? "نربط فِرق المشتريات بموردي المنتجات الصناعية عبر كتالوج شفّاف، وعملية تسعير منظمة، وتواصل مباشر مع فريق متخصص."
+                : "We connect procurement teams with industrial suppliers through a transparent catalog, an organized quotation flow, and direct contact with a specialized team."}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <Button asChild size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">

@@ -14,6 +14,8 @@ export type DBBrand = {
 export type DBCategory = {
   id: string;
   name: string;
+  name_ar?: string | null;
+  name_en?: string | null;
   slug: string;
   parent_id: string | null;
   is_active: boolean;

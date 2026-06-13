@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trash2, ArrowUp, ArrowDown, Star, ImageIcon } from "lucide-react";
+import { Loader2, Trash2, ArrowUp, ArrowDown, Star, ImageIcon, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ALLOWED_PRODUCT_IMAGE, MAX_IMAGE_BYTES, uploadToBucket } from "@/lib/storage";
@@ -26,6 +26,8 @@ export const ProductImagesEditor = ({
   const [images, setImages] = useState<Img[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -86,6 +88,28 @@ export const ProductImagesEditor = ({
     reorder(next);
   };
 
+  const handleDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", String(idx)); } catch {}
+  };
+  const handleDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (overIdx !== idx) setOverIdx(idx);
+  };
+  const handleDrop = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = dragIdx;
+    setDragIdx(null); setOverIdx(null);
+    if (from == null || from === idx) return;
+    const next = [...images];
+    const [moved] = next.splice(from, 1);
+    next.splice(idx, 0, moved);
+    reorder(next);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setOverIdx(null); };
+
   return (
     <div className="space-y-3">
       <div>
@@ -109,30 +133,46 @@ export const ProductImagesEditor = ({
           {lang === "ar" ? "لا توجد صور" : "No images yet"}
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {images.map((im, idx) => (
-            <div key={im.id} className="relative group border border-border rounded overflow-hidden">
-              <img src={im.image_url} alt="" className="w-full aspect-square object-cover" />
-              {idx === 0 && (
-                <Badge className="absolute top-1 start-1 bg-primary text-primary-foreground border-0 text-[10px]">
-                  <Star className="h-3 w-3 me-1" /> {lang === "ar" ? "رئيسية" : "Primary"}
-                </Badge>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-black/65 p-1 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-base">
-                <div className="flex gap-0.5">
-                  <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => move(idx, -1)} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => move(idx, 1)} disabled={idx === images.length - 1}><ArrowDown className="h-3 w-3" /></Button>
-                  {idx !== 0 && (
-                    <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => makePrimary(idx)}><Star className="h-3 w-3" /></Button>
-                  )}
+        <>
+          <p className="text-xs text-muted-foreground">{lang === "ar" ? "اسحب الصور لإعادة الترتيب" : "Drag images to reorder"}</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {images.map((im, idx) => (
+              <div
+                key={im.id}
+                draggable
+                onDragStart={handleDragStart(idx)}
+                onDragOver={handleDragOver(idx)}
+                onDrop={handleDrop(idx)}
+                onDragEnd={handleDragEnd}
+                className={`relative group border-2 rounded overflow-hidden cursor-grab active:cursor-grabbing transition-base ${
+                  dragIdx === idx ? "opacity-40" : ""
+                } ${overIdx === idx && dragIdx !== idx ? "border-primary ring-2 ring-primary/40" : "border-border"}`}
+              >
+                <img src={im.image_url} alt="" className="w-full aspect-square object-cover pointer-events-none" />
+                <div className="absolute top-1 end-1 bg-black/60 rounded p-0.5 text-white opacity-0 group-hover:opacity-100">
+                  <GripVertical className="h-3.5 w-3.5" />
                 </div>
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:bg-destructive/20" onClick={() => remove(im.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                {idx === 0 && (
+                  <Badge className="absolute top-1 start-1 bg-primary text-primary-foreground border-0 text-[10px]">
+                    <Star className="h-3 w-3 me-1" /> {lang === "ar" ? "رئيسية" : "Primary"}
+                  </Badge>
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-black/65 p-1 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition-base">
+                  <div className="flex gap-0.5">
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => move(idx, -1)} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => move(idx, 1)} disabled={idx === images.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                    {idx !== 0 && (
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => makePrimary(idx)}><Star className="h-3 w-3" /></Button>
+                    )}
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:bg-destructive/20" onClick={() => remove(im.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

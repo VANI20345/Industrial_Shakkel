@@ -14,8 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { slugify, uploadToBucket, ALLOWED_PRODUCT_IMAGE, MAX_IMAGE_BYTES } from "@/lib/storage";
 
-type Category = { id: string; name: string; slug: string; is_active: boolean; image_url: string | null };
-const empty = { id: "", name: "", slug: "", is_active: true, image_url: "" as string };
+type Category = { id: string; name: string; name_ar?: string | null; name_en?: string | null; slug: string; is_active: boolean; image_url: string | null };
+const empty = { id: "", name: "", name_ar: "", name_en: "", slug: "", is_active: true, image_url: "" as string };
 
 const AdminCategories = () => {
   const { t, lang } = useI18n();
@@ -62,7 +62,9 @@ const AdminCategories = () => {
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
-    if (!form.name.trim()) return toast.error(lang === "ar" ? "الاسم مطلوب" : "Name required");
+    const nameEn = (form.name_en || form.name).trim();
+    const nameAr = (form.name_ar || form.name).trim();
+    if (!nameEn && !nameAr) return toast.error(lang === "ar" ? "الاسم مطلوب" : "Name required");
     setSaving(true);
     try {
       let image_url: string | null = form.image_url || null;
@@ -71,7 +73,15 @@ const AdminCategories = () => {
         if (imgFile.size > MAX_IMAGE_BYTES) throw new Error(lang === "ar" ? "الصورة أكبر من 5MB" : "Image > 5MB");
         image_url = await uploadToBucket("brand-logos", imgFile, "categories");
       }
-      const payload = { name: form.name.trim(), slug: form.slug.trim() || slugify(form.name), is_active: form.is_active, image_url };
+      const displayName = nameEn || nameAr;
+      const payload: any = {
+        name: displayName,
+        name_en: nameEn || null,
+        name_ar: nameAr || null,
+        slug: form.slug.trim() || slugify(displayName),
+        is_active: form.is_active,
+        image_url,
+      };
       const { error } = form.id
         ? await supabase.from("categories").update(payload).eq("id", form.id)
         : await supabase.from("categories").insert(payload);
@@ -107,7 +117,10 @@ const AdminCategories = () => {
                     <div className="h-14 w-14 rounded-md bg-secondary flex items-center justify-center text-muted-foreground text-xs">—</div>
                   )}
                   <div>
-                    <h3 className="font-bold text-lg">{c.name}</h3>
+                    <h3 className="font-bold text-lg">{(lang === "ar" ? c.name_ar : c.name_en) || c.name}</h3>
+                    {(c.name_ar && c.name_en) && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{lang === "ar" ? c.name_en : c.name_ar}</p>
+                    )}
                     <div className="flex gap-2 mt-2 flex-wrap">
                       <Badge variant="outline">{counts[c.id] || 0} products</Badge>
                       <Badge variant="outline" className={c.is_active ? "bg-success/10 text-success border-success/30" : "bg-muted"}>
@@ -119,7 +132,7 @@ const AdminCategories = () => {
                 <div className="flex flex-col gap-1 items-center">
                   <Switch checked={c.is_active} onCheckedChange={() => toggle(c)} />
                   <div className="flex">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setForm({ id: c.id, name: c.name, slug: c.slug, is_active: c.is_active, image_url: c.image_url || "" }); setImgFile(null); setOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setForm({ id: c.id, name: c.name, name_ar: c.name_ar || "", name_en: c.name_en || "", slug: c.slug, is_active: c.is_active, image_url: c.image_url || "" }); setImgFile(null); setOpen(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setToDelete(c)}>
@@ -137,7 +150,16 @@ const AdminCategories = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>{form.id ? t.admin.edit : t.admin.addNew}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>{t.admin.name} *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={80} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{lang === "ar" ? "الاسم بالعربي" : "Arabic name"} *</Label>
+                <Input dir="rtl" value={form.name_ar} onChange={(e) => setForm({ ...form, name_ar: e.target.value })} maxLength={80} placeholder="مثل: مكونات ميكانيكية" />
+              </div>
+              <div>
+                <Label>{lang === "ar" ? "الاسم بالإنجليزي" : "English name"} *</Label>
+                <Input dir="ltr" value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} maxLength={80} placeholder="e.g. Mechanical Components" />
+              </div>
+            </div>
             <div><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="auto" /></div>
             <div>
               <Label>{lang === "ar" ? "صورة التصنيف (اختياري)" : "Category image (optional)"}</Label>

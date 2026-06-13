@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useBrands, useCategories, useProducts, type SortBy, type Availability } from "@/hooks/useCatalog";
 import { Seo } from "@/components/Seo";
+import { ProductGridSkeleton } from "@/components/ProductCardSkeleton";
 
 const PAGE_SIZE = 12;
 
@@ -149,7 +150,9 @@ const Products = () => {
               </div>
             </div>
 
-            {!loading && products.length === 0 ? (
+            {loading ? (
+              <ProductGridSkeleton count={PAGE_SIZE} />
+            ) : products.length === 0 ? (
               <Card className="p-12 text-center text-muted-foreground">{t.products.noResults}</Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">

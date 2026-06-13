@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Download, Eye, Loader2, MessageCircle, Mail, Globe, FileText, FileSpreadsheet } from "lucide-react";
+import { Download, Eye, MessageCircle, Mail, Globe, FileText, FileSpreadsheet } from "lucide-react";
+import { TableRowSkeleton } from "@/components/ProductCardSkeleton";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { generateQuotePdf, exportXlsx } from "@/lib/reports";
 import { cn } from "@/lib/utils";
@@ -152,24 +153,21 @@ const AdminQuotes = () => {
       </div>
 
       <Card className="overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/60">
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-5 py-3">{t.admin.customer}</th>
-                  <th className="px-5 py-3">Email</th>
-                  <th className="px-5 py-3">{t.admin.items}</th>
-                  <th className="px-5 py-3">Total Qty</th>
-                  <th className="px-5 py-3">{t.admin.status}</th>
-                  <th className="px-5 py-3">{t.admin.date}</th>
-                  <th className="px-5 py-3 text-end">{t.admin.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((q) => {
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-5 py-3">{t.admin.customer}</th>
+                <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">{t.admin.items}</th>
+                <th className="px-5 py-3">Total Qty</th>
+                <th className="px-5 py-3">{t.admin.status}</th>
+                <th className="px-5 py-3">{t.admin.date}</th>
+                <th className="px-5 py-3 text-end">{t.admin.actions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? <TableRowSkeleton cols={7} rows={6} /> : rows.map((q) => {
                   const totalQty = (q.quote_request_items || []).reduce((s, i) => s + i.requested_quantity, 0);
                   const k = statusKey[q.status] || "new";
                   return (
@@ -249,12 +247,11 @@ const AdminQuotes = () => {
                       </td>
                     </tr>
                   );
-                })}
-                {rows.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No quotes</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        )}
+              })}
+              {!loading && rows.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No quotes</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       <Dialog open={!!view} onOpenChange={(o) => !o && setView(null)}>
