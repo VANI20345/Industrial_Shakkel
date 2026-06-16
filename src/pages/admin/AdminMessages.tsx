@@ -6,12 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Mail, Phone, ShieldCheck, User as UserIcon, Send, MessageCircle } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, Mail, Phone, ShieldCheck, User as UserIcon, Send, MessageCircle, MessageSquareText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 type Msg = {
   id: string;
@@ -53,6 +57,7 @@ const AdminMessages = () => {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [meName, setMeName] = useState("Admin");
+  const [canned, setCanned] = useState<{ id: string; title_ar: string; title_en: string; body_ar: string; body_en: string }[]>([]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = supabase as any;
@@ -61,6 +66,12 @@ const AdminMessages = () => {
     const { data } = await client.from("contact_messages").select("*").order("updated_at", { ascending: false });
     setRows((data as Msg[]) || []);
   };
+
+  useEffect(() => {
+    client.from("canned_responses").select("id,title_ar,title_en,body_ar,body_en").eq("is_active", true).order("sort_order", { ascending: true })
+      .then(({ data }: any) => setCanned(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -220,7 +231,38 @@ const AdminMessages = () => {
                     placeholder={lang === "ar" ? "اكتب ردك للعميل…" : "Write your reply to the customer…"}
                     maxLength={4000}
                   />
-                  <div className="flex justify-end mt-2">
+                  <div className="flex justify-between items-center mt-2 gap-2 flex-wrap">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-xs">
+                          <MessageSquareText className="h-3.5 w-3.5 me-1" />
+                          {lang === "ar" ? "إدراج رد جاهز" : "Insert canned reply"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-72 max-h-80 overflow-y-auto">
+                        <DropdownMenuLabel className="text-xs">{lang === "ar" ? "اختر قالباً" : "Choose a template"}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {canned.length === 0 ? (
+                          <div className="px-2 py-3 text-xs text-muted-foreground">
+                            {lang === "ar" ? "لا توجد قوالب." : "No templates."}{" "}
+                            <Link to="/admin/canned-responses" className="text-primary underline">{lang === "ar" ? "أضف" : "Add"}</Link>
+                          </div>
+                        ) : canned.map((c) => (
+                          <DropdownMenuItem
+                            key={c.id}
+                            onClick={() => setReply((prev) => prev ? `${prev}\n\n${lang === "ar" ? c.body_ar : c.body_en}` : (lang === "ar" ? c.body_ar : c.body_en))}
+                            className="flex-col items-start gap-0.5"
+                          >
+                            <span className="text-xs font-semibold">{lang === "ar" ? c.title_ar : c.title_en}</span>
+                            <span className="text-[10px] text-muted-foreground line-clamp-1">{lang === "ar" ? c.body_ar : c.body_en}</span>
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin/canned-responses" className="text-xs text-primary">{lang === "ar" ? "إدارة القوالب…" : "Manage templates…"}</Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button onClick={sendReply} disabled={sending || !reply.trim()} className="bg-gradient-primary">
                       {sending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Send className="h-4 w-4 me-2" />}
                       {lang === "ar" ? "إرسال الرد" : "Send Reply"}

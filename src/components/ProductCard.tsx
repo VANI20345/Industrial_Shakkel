@@ -8,13 +8,15 @@ import { useQuote } from "@/contexts/QuoteContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DBProduct, productPrimaryImage, stockState } from "@/hooks/useCatalog";
+import { productName } from "@/lib/i18nProduct";
 
 export const ProductCard = ({ product }: { product: DBProduct }) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { add, has } = useQuote();
   const status = stockState(product);
   const inQuote = has(product.id);
   const img = productPrimaryImage(product);
+  const name = productName(product, lang);
 
   const statusConfig = {
     in: { label: t.products.inStock, cls: "bg-success/10 text-success border-success/30" },
@@ -26,7 +28,7 @@ export const ProductCard = ({ product }: { product: DBProduct }) => {
     e.preventDefault();
     if (status === "out") return;
     add(product.id, product.min_order_qty);
-    toast.success(t.products.added, { description: product.name });
+    toast.success(t.products.added, { description: name });
   };
 
   return (
@@ -36,7 +38,7 @@ export const ProductCard = ({ product }: { product: DBProduct }) => {
           {img ? (
             <img
               src={img}
-              alt={product.name}
+              alt={name}
               loading="lazy"
               decoding="async"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -62,7 +64,7 @@ export const ProductCard = ({ product }: { product: DBProduct }) => {
           <p className="text-xs font-mono text-muted-foreground mb-1">{product.code}</p>
           <Link to={`/products/${product.id}`}>
             <h3 className="font-semibold leading-snug line-clamp-2 hover:text-primary transition-base">
-              {product.name}
+              {name}
             </h3>
           </Link>
         </div>

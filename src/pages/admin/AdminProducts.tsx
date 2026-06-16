@@ -25,8 +25,11 @@ import { exportXlsx } from "@/lib/reports";
 type Brand = { id: string; name: string };
 type Cat = { id: string; name: string };
 type Product = {
-  id: string; code: string; name: string; description: string | null;
-  long_description: string | null; highlights: string[]; specs: any;
+  id: string; code: string;
+  name: string; name_ar: string | null; name_en: string | null;
+  description: string | null; description_ar: string | null; description_en: string | null;
+  long_description: string | null; long_description_ar: string | null; long_description_en: string | null;
+  highlights: string[]; specs: any; specs_ar: any; specs_en: any;
   shakkel_ref: string | null;
   brand_id: string | null; category_id: string | null;
   unit: string; min_order_qty: number; stock_qty: number;
@@ -39,15 +42,18 @@ type Product = {
 };
 
 const emptyForm = {
-  id: "", code: "", name: "", description: "",
-  long_description: "",
+  id: "", code: "",
+  name_ar: "", name_en: "",
+  description_ar: "", description_en: "",
+  long_description_ar: "", long_description_en: "",
   brand_id: "", category_id: "",
   unit: "pcs", min_order_qty: 1, stock_qty: 0,
   low_stock_threshold: 10,
   is_active: true, datasheet_url: "",
   shakkel_ref: "",
   highlights: [] as string[],
-  specs: [] as Spec[],
+  specs_ar: [] as Spec[],
+  specs_en: [] as Spec[],
 };
 
 const AdminProducts = () => {
@@ -116,15 +122,21 @@ const AdminProducts = () => {
   const openNew = () => { setForm(emptyForm); setPendingImages([]); setPendingDocs([]); setOpen(true); };
   const openEdit = (p: Product) => {
     setForm({
-      id: p.id, code: p.code, name: p.name, description: p.description || "",
-      long_description: p.long_description || "",
+      id: p.id, code: p.code,
+      name_ar: p.name_ar || p.name || "",
+      name_en: p.name_en || p.name || "",
+      description_ar: p.description_ar || p.description || "",
+      description_en: p.description_en || p.description || "",
+      long_description_ar: p.long_description_ar || p.long_description || "",
+      long_description_en: p.long_description_en || p.long_description || "",
       brand_id: p.brand_id || "", category_id: p.category_id || "",
       unit: p.unit, min_order_qty: p.min_order_qty, stock_qty: p.stock_qty,
       low_stock_threshold: p.low_stock_threshold,
       is_active: p.is_active, datasheet_url: p.datasheet_url || "",
       shakkel_ref: p.shakkel_ref || "",
       highlights: Array.isArray(p.highlights) ? p.highlights : [],
-      specs: Array.isArray(p.specs) ? (p.specs as Spec[]) : [],
+      specs_ar: Array.isArray(p.specs_ar) && p.specs_ar.length ? (p.specs_ar as Spec[]) : (Array.isArray(p.specs) ? (p.specs as Spec[]) : []),
+      specs_en: Array.isArray(p.specs_en) && p.specs_en.length ? (p.specs_en as Spec[]) : (Array.isArray(p.specs) ? (p.specs as Spec[]) : []),
     });
     setPendingImages([]); setPendingDocs([]);
     setOpen(true);
@@ -137,24 +149,44 @@ const AdminProducts = () => {
   };
 
   const submit = async () => {
-    if (!form.code.trim() || !form.name.trim()) return toast.error(lang === "ar" ? "الكود والاسم مطلوبان" : "Code and name required");
+    const nameAr = form.name_ar.trim();
+    const nameEn = form.name_en.trim();
+    if (!form.code.trim()) return toast.error(lang === "ar" ? "الكود مطلوب" : "Code required");
+    if (!nameAr || !nameEn) return toast.error(lang === "ar" ? "اسم المنتج مطلوب بالعربي والإنجليزي" : "Product name required in both Arabic and English");
     if (form.min_order_qty < 1) return toast.error(lang === "ar" ? "أقل كمية يجب أن تكون ١ على الأقل" : "Min order ≥ 1");
     if (form.stock_qty < 0) return toast.error(lang === "ar" ? "المخزون لا يمكن أن يكون سالبًا" : "Stock can't be negative");
 
     setSaving(true);
     try {
       const cleanedHighlights = form.highlights.map((h) => h.trim()).filter(Boolean).slice(0, 12);
-      const cleanedSpecs = form.specs
+      const cleanSpecs = (arr: Spec[]) => arr
         .map((s) => ({ label: s.label.trim(), value: s.value.trim() }))
         .filter((s) => s.label || s.value);
+      const cleanedSpecsAr = cleanSpecs(form.specs_ar);
+      const cleanedSpecsEn = cleanSpecs(form.specs_en);
+
+      const descAr = form.description_ar.trim();
+      const descEn = form.description_en.trim();
+      const longAr = form.long_description_ar.trim();
+      const longEn = form.long_description_en.trim();
 
       const payload: any = {
         code: form.code.trim(),
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        long_description: form.long_description.trim() || null,
+        // Legacy single-language columns kept in sync (prefer AR, fallback EN) for backward compatibility
+        name: nameAr || nameEn,
+        description: (descAr || descEn) || null,
+        long_description: (longAr || longEn) || null,
+        specs: cleanedSpecsAr.length ? cleanedSpecsAr : cleanedSpecsEn,
+        // Bilingual columns
+        name_ar: nameAr,
+        name_en: nameEn,
+        description_ar: descAr || null,
+        description_en: descEn || null,
+        long_description_ar: longAr || null,
+        long_description_en: longEn || null,
+        specs_ar: cleanedSpecsAr,
+        specs_en: cleanedSpecsEn,
         highlights: cleanedHighlights,
-        specs: cleanedSpecs,
         brand_id: form.brand_id || null,
         category_id: form.category_id || null,
         unit: form.unit.trim() || "pcs",
@@ -339,7 +371,16 @@ const AdminProducts = () => {
                   <Label>Shakkel Ref</Label>
                   <Input value={form.shakkel_ref} readOnly disabled placeholder={lang === "ar" ? "يُولَّد تلقائيًا عند الحفظ" : "auto-generated on save"} className="font-mono text-xs bg-secondary/40" />
                 </div>
-                <div className="col-span-2"><Label>{t.admin.name} *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={160} /></div>
+                <div className="col-span-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{t.admin.name} (العربية) *</Label>
+                    <Input value={form.name_ar} onChange={(e) => setForm({ ...form, name_ar: e.target.value })} maxLength={160} dir="rtl" />
+                  </div>
+                  <div>
+                    <Label>{t.admin.name} (English) *</Label>
+                    <Input value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} maxLength={160} dir="ltr" />
+                  </div>
+                </div>
                 <div>
                   <Label>{t.products.brand}</Label>
                   <Select value={form.brand_id || "none"} onValueChange={(v) => setForm({ ...form, brand_id: v === "none" ? "" : v })}>
@@ -385,18 +426,47 @@ const AdminProducts = () => {
 
             <TabsContent value="details" className="mt-4 space-y-5">
               <HighlightsEditor value={form.highlights} onChange={(h) => setForm({ ...form, highlights: h })} lang={lang} />
-              <div>
-                <Label>{lang === "ar" ? "ملخص قصير" : "Summary"}</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} maxLength={500} />
-              </div>
-              <div>
-                <Label>{lang === "ar" ? "الوصف الطويل (اختياري)" : "Long description (optional)"}</Label>
-                <Textarea value={form.long_description} onChange={(e) => setForm({ ...form, long_description: e.target.value })} rows={6} maxLength={5000} />
-              </div>
+              <Tabs defaultValue="ar" className="w-full">
+                <TabsList className="grid grid-cols-2 w-full max-w-xs">
+                  <TabsTrigger value="ar">العربية</TabsTrigger>
+                  <TabsTrigger value="en">English</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ar" className="mt-3 space-y-4" dir="rtl">
+                  <div>
+                    <Label>ملخص قصير</Label>
+                    <Textarea value={form.description_ar} onChange={(e) => setForm({ ...form, description_ar: e.target.value })} rows={3} maxLength={500} />
+                  </div>
+                  <div>
+                    <Label>الوصف الطويل (اختياري)</Label>
+                    <Textarea value={form.long_description_ar} onChange={(e) => setForm({ ...form, long_description_ar: e.target.value })} rows={6} maxLength={5000} />
+                  </div>
+                </TabsContent>
+                <TabsContent value="en" className="mt-3 space-y-4" dir="ltr">
+                  <div>
+                    <Label>Summary</Label>
+                    <Textarea value={form.description_en} onChange={(e) => setForm({ ...form, description_en: e.target.value })} rows={3} maxLength={500} />
+                  </div>
+                  <div>
+                    <Label>Long description (optional)</Label>
+                    <Textarea value={form.long_description_en} onChange={(e) => setForm({ ...form, long_description_en: e.target.value })} rows={6} maxLength={5000} />
+                  </div>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="specs" className="mt-4">
-              <SpecsEditor value={form.specs} onChange={(s) => setForm({ ...form, specs: s })} lang={lang} />
+              <Tabs defaultValue="ar" className="w-full">
+                <TabsList className="grid grid-cols-2 w-full max-w-xs">
+                  <TabsTrigger value="ar">العربية</TabsTrigger>
+                  <TabsTrigger value="en">English</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ar" className="mt-3" dir="rtl">
+                  <SpecsEditor value={form.specs_ar} onChange={(s) => setForm({ ...form, specs_ar: s })} lang="ar" />
+                </TabsContent>
+                <TabsContent value="en" className="mt-3" dir="ltr">
+                  <SpecsEditor value={form.specs_en} onChange={(s) => setForm({ ...form, specs_en: s })} lang="en" />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
 

@@ -14,6 +14,7 @@ import { useProduct, productPrimaryImage, stockState } from "@/hooks/useCatalog"
 import { Seo } from "@/components/Seo";
 import { ProductGallery } from "@/components/ProductGallery";
 import { docIcon } from "@/components/admin/ProductDocumentsEditor";
+import { productName, productDescription, productLongDescription, productSpecs } from "@/lib/i18nProduct";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -32,8 +33,10 @@ const ProductDetails = () => {
   const mainImg = productPrimaryImage(product);
   const docs = (product.product_documents || []).slice().sort((a, b) => a.sort_order - b.sort_order);
   const highlights = (product.highlights || []).filter(Boolean);
-  const specs = Array.isArray(product.specs) ? product.specs : [];
-  const longDesc = product.long_description?.trim() || "";
+  const name = productName(product, lang);
+  const desc = productDescription(product, lang);
+  const longDesc = productLongDescription(product, lang);
+  const specs = productSpecs(product, lang);
 
   const handleAdd = () => {
     if (qty > product.stock_qty) { toast.error(t.products.maxStockError); return; }
@@ -47,9 +50,9 @@ const ProductDetails = () => {
   const jsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
+    name: name,
     sku: product.code,
-    description: (product.description || longDesc || undefined),
+    description: (desc || longDesc || undefined),
     image: mainImg || undefined,
     brand: product.brands ? { "@type": "Brand", name: product.brands.name } : undefined,
     category: product.categories?.name || undefined,
@@ -68,8 +71,8 @@ const ProductDetails = () => {
   return (
     <SiteLayout>
       <Seo
-        title={`${product.name} (${product.code})`}
-        description={product.description?.slice(0, 160) || `${product.name} — ${product.brands?.name || ""}`}
+        title={`${name} (${product.code})`}
+        description={desc?.slice(0, 160) || `${name} — ${product.brands?.name || ""}`}
         image={mainImg || undefined}
         type="product"
         path={`/products/${product.id}`}
@@ -81,14 +84,14 @@ const ProductDetails = () => {
         </Button>
 
         <div className="grid lg:grid-cols-2 gap-10">
-          <ProductGallery images={product.product_images || []} alt={product.name} />
+          <ProductGallery images={product.product_images || []} alt={name} />
 
           <div className="flex flex-col">
             <div className="flex items-center gap-3 mb-3 flex-wrap">
               {product.brands && <span className="text-sm font-bold px-3 py-1 rounded bg-secondary text-foreground">{product.brands.name}</span>}
               {product.categories && <span className="text-sm text-muted-foreground">{product.categories.name}</span>}
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">{product.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">{name}</h1>
             <div className="mt-2 space-y-0.5">
               <p className="font-mono text-sm text-muted-foreground">{t.products.code}: {product.code}</p>
               {product.shakkel_ref && <p className="font-mono text-xs text-muted-foreground">Shakkel Ref: {product.shakkel_ref}</p>}
@@ -105,7 +108,7 @@ const ProductDetails = () => {
               </Badge>
             </div>
 
-            {product.description && <p className="mt-6 text-foreground/80 leading-relaxed whitespace-pre-line">{product.description}</p>}
+            {desc && <p className="mt-6 text-foreground/80 leading-relaxed whitespace-pre-line">{desc}</p>}
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
               <div>

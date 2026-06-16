@@ -4,18 +4,33 @@ import { useI18n } from "@/i18n/I18nProvider";
 import {
   LayoutDashboard, Building2, FolderTree, Package, Boxes, FileSpreadsheet,
   Users, Settings, Globe, ChevronLeft, Inbox, FileUp, History, UserCog, BarChart3, MapPin, Menu,
+  MessageSquareText, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
+import { NotificationsBell } from "@/components/admin/NotificationsBell";
+import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 
 export const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { t, lang, toggle, dir } = useI18n();
   const navigate = useNavigate();
   const [newCount, setNewCount] = useState<number>(0);
   const [msgCount, setMsgCount] = useState<number>(0);
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -63,6 +78,7 @@ export const AdminLayout = ({ children }: { children: ReactNode }) => {
         { to: "/admin/quotes", icon: FileSpreadsheet, label: t.admin.quotes, badge: newCount },
         { to: "/admin/customers", icon: Users, label: t.admin.customers },
         { to: "/admin/messages", icon: Inbox, label: lang === "ar" ? "الرسائل" : "Inbox", badge: msgCount },
+        { to: "/admin/canned-responses", icon: MessageSquareText, label: lang === "ar" ? "ردود جاهزة" : "Canned Responses" },
       ],
     },
 
@@ -81,27 +97,36 @@ export const AdminLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen flex bg-secondary/30">
       <SidebarBody groups={groups} dir={dir} lang={lang} toggle={toggle} navigate={navigate} />
       <div className="flex-1 min-w-0">
-        <header className="md:hidden bg-sidebar text-sidebar-foreground p-3 flex items-center justify-between sticky top-0 z-30">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent/60">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side={dir === "rtl" ? "right" : "left"} className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border">
-              <SidebarBody groups={groups} dir={dir} lang={lang} toggle={toggle} navigate={navigate} inSheet />
-            </SheetContent>
-          </Sheet>
-          <div className="font-bold inline-flex items-center gap-2">
-            {lang === "ar" ? "الإدارة" : "Admin"}
-            {newCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">{newCount}</span>
-            )}
+        <header className="bg-background border-b sticky top-0 z-30 flex items-center justify-between gap-2 px-3 md:px-6 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side={dir === "rtl" ? "right" : "left"} className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border">
+                <SidebarBody groups={groups} dir={dir} lang={lang} toggle={toggle} navigate={navigate} inSheet />
+              </SheetContent>
+            </Sheet>
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="hidden sm:inline-flex items-center gap-2 h-9 px-3 rounded-md border bg-secondary/40 hover:bg-secondary/70 text-xs text-muted-foreground transition-base min-w-[260px]"
+            >
+              <Search className="h-3.5 w-3.5" />
+              <span className="flex-1 text-start">{lang === "ar" ? "بحث سريع…" : "Quick search…"}</span>
+              <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-background border font-mono">⌘K</kbd>
+            </button>
+            <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setCmdOpen(true)}><Search className="h-4 w-4" /></Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-sidebar-foreground">{lang === "ar" ? "الموقع" : "Site"}</Button>
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>{lang === "ar" ? "الموقع" : "Site"}</Button>
+          </div>
         </header>
         <div className="p-4 md:p-8">{children}</div>
       </div>
+      <AdminCommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
     </div>
   );
 };

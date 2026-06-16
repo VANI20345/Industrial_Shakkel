@@ -28,12 +28,20 @@ export type DBProduct = {
   id: string;
   code: string;
   name: string;
+  name_ar?: string | null;
+  name_en?: string | null;
   brand_id: string | null;
   category_id: string | null;
   description: string | null;
+  description_ar?: string | null;
+  description_en?: string | null;
   long_description: string | null;
+  long_description_ar?: string | null;
+  long_description_en?: string | null;
   highlights: string[];
   specs: ProductSpec[];
+  specs_ar?: ProductSpec[];
+  specs_en?: ProductSpec[];
   shakkel_ref: string | null;
   datasheet_url: string | null;
   unit: string;
@@ -113,7 +121,7 @@ export const useProducts = (filters?: {
     }
     if (filters?.search && filters.search.trim()) {
       const s = filters.search.trim().replace(/[%,]/g, "");
-      q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%,description.ilike.%${s}%`);
+      q = q.or(`name.ilike.%${s}%,name_ar.ilike.%${s}%,name_en.ilike.%${s}%,code.ilike.%${s}%,description.ilike.%${s}%,description_ar.ilike.%${s}%,description_en.ilike.%${s}%`);
     }
     switch (sortBy) {
       case "oldest": q = q.order("created_at", { ascending: true }); break;

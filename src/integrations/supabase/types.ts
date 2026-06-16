@@ -86,6 +86,48 @@ export type Database = {
         }
         Relationships: []
       }
+      canned_responses: {
+        Row: {
+          body_ar: string
+          body_en: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          sort_order: number
+          title_ar: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          body_ar: string
+          body_en: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title_ar: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          body_ar?: string
+          body_en?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -348,15 +390,23 @@ export type Database = {
           created_at: string
           datasheet_url: string | null
           description: string | null
+          description_ar: string | null
+          description_en: string | null
           highlights: string[]
           id: string
           is_active: boolean
           long_description: string | null
+          long_description_ar: string | null
+          long_description_en: string | null
           low_stock_threshold: number
           min_order_qty: number
           name: string
+          name_ar: string | null
+          name_en: string | null
           shakkel_ref: string | null
           specs: Json
+          specs_ar: Json
+          specs_en: Json
           status: Database["public"]["Enums"]["product_status"]
           stock_qty: number
           unit: string
@@ -369,15 +419,23 @@ export type Database = {
           created_at?: string
           datasheet_url?: string | null
           description?: string | null
+          description_ar?: string | null
+          description_en?: string | null
           highlights?: string[]
           id?: string
           is_active?: boolean
           long_description?: string | null
+          long_description_ar?: string | null
+          long_description_en?: string | null
           low_stock_threshold?: number
           min_order_qty?: number
           name: string
+          name_ar?: string | null
+          name_en?: string | null
           shakkel_ref?: string | null
           specs?: Json
+          specs_ar?: Json
+          specs_en?: Json
           status?: Database["public"]["Enums"]["product_status"]
           stock_qty?: number
           unit?: string
@@ -390,15 +448,23 @@ export type Database = {
           created_at?: string
           datasheet_url?: string | null
           description?: string | null
+          description_ar?: string | null
+          description_en?: string | null
           highlights?: string[]
           id?: string
           is_active?: boolean
           long_description?: string | null
+          long_description_ar?: string | null
+          long_description_en?: string | null
           low_stock_threshold?: number
           min_order_qty?: number
           name?: string
+          name_ar?: string | null
+          name_en?: string | null
           shakkel_ref?: string | null
           specs?: Json
+          specs_ar?: Json
+          specs_en?: Json
           status?: Database["public"]["Enums"]["product_status"]
           stock_qty?: number
           unit?: string

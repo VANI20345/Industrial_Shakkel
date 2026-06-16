@@ -44,6 +44,7 @@ const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminCities = lazy(() => import("./pages/admin/AdminCities"));
+const AdminCannedResponses = lazy(() => import("./pages/admin/AdminCannedResponses"));
 
 const Fallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -99,6 +100,7 @@ const App = () => (
                     <Route path="/admin/roles" element={<RequireAdmin><AdminRoles /></RequireAdmin>} />
                     <Route path="/admin/settings" element={<RequireAdmin><AdminSettings /></RequireAdmin>} />
                     <Route path="/admin/cities" element={<RequireAdmin><AdminCities /></RequireAdmin>} />
+                    <Route path="/admin/canned-responses" element={<RequireAdmin><AdminCannedResponses /></RequireAdmin>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
