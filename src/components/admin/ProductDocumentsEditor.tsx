@@ -84,7 +84,7 @@ export const ProductDocumentsEditor = ({
   return (
     <div className="space-y-3">
       <div>
-        <Label>{lang === "ar" ? "إضافة مستندات" : "Add documents"} (PDF/DOC/XLS/Images, ≤15MB)</Label>
+        <Label>{lang === "ar" ? "إضافة ملفات داتا شيت" : "Add datasheets"} (PDF/DOC/XLS/Images, ≤15MB)</Label>
         <Input
           type="file" multiple
           accept=".pdf,.doc,.docx,.xls,.xlsx,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -99,7 +99,7 @@ export const ProductDocumentsEditor = ({
         <div className="p-6 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></div>
       ) : docs.length === 0 ? (
         <div className="p-6 text-center text-muted-foreground border border-dashed rounded text-sm">
-          {lang === "ar" ? "لا توجد مستندات" : "No documents"}
+          {lang === "ar" ? "لا توجد ملفات داتا شيت" : "No datasheets"}
         </div>
       ) : (
         <ul className="space-y-2">
@@ -133,7 +133,7 @@ export const PendingDocumentsPicker = ({
 }: { files: { file: File; name: string }[]; onChange: (f: { file: File; name: string }[]) => void; lang: "ar" | "en" }) => {
   return (
     <div className="space-y-2">
-      <Label>{lang === "ar" ? "مستندات المنتج" : "Product documents"} (PDF/DOC/XLS/Images, ≤15MB)</Label>
+      <Label>{lang === "ar" ? "ملفات الداتا شيت للمنتج" : "Product datasheets"} (PDF/DOC/XLS/Images, ≤15MB)</Label>
       <Input
         type="file" multiple
         accept=".pdf,.doc,.docx,.xls,.xlsx,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

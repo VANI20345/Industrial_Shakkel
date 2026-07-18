@@ -91,6 +91,7 @@ export type Availability = "all" | "in" | "low" | "out";
 export const useProducts = (filters?: {
   brandId?: string;
   categoryId?: string;
+  categoryIds?: string[];
   search?: string;
   adminMode?: boolean;
   page?: number;
@@ -104,6 +105,7 @@ export const useProducts = (filters?: {
   const page = filters?.page ?? 1;
   const pageSize = filters?.pageSize ?? 12;
   const sortBy = filters?.sortBy ?? "newest";
+  const categoryIdsKey = (filters?.categoryIds || []).join(",");
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -113,7 +115,8 @@ export const useProducts = (filters?: {
 
     if (!filters?.adminMode) q = q.eq("is_active", true).eq("status", "active");
     if (filters?.brandId) q = q.eq("brand_id", filters.brandId);
-    if (filters?.categoryId) q = q.eq("category_id", filters.categoryId);
+    if (filters?.categoryIds && filters.categoryIds.length) q = q.in("category_id", filters.categoryIds);
+    else if (filters?.categoryId) q = q.eq("category_id", filters.categoryId);
     if (filters?.availability && filters.availability !== "all") {
       if (filters.availability === "in") q = q.gte("stock_qty", 10);
       else if (filters.availability === "low") q = q.gt("stock_qty", 0).lt("stock_qty", 10);
@@ -139,7 +142,7 @@ export const useProducts = (filters?: {
     setData(((data as any[]) || []) as DBProduct[]);
     setTotal(count ?? 0);
     setLoading(false);
-  }, [filters?.brandId, filters?.categoryId, filters?.search, filters?.adminMode, filters?.availability, page, pageSize, sortBy]);
+  }, [filters?.brandId, filters?.categoryId, categoryIdsKey, filters?.search, filters?.adminMode, filters?.availability, page, pageSize, sortBy]);
   useEffect(() => { refetch(); }, [refetch]);
   return { data, total, loading, refetch };
 };

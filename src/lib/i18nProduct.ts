@@ -16,6 +16,9 @@ type ProductLike = {
   specs?: unknown;
   specs_ar?: unknown;
   specs_en?: unknown;
+  highlights?: string[] | null;
+  highlights_ar?: string[] | null;
+  highlights_en?: string[] | null;
 };
 
 const pick = (lang: Lang, primary?: string | null, alt?: string | null, legacy?: string | null) => {
@@ -58,4 +61,16 @@ export const productSpecs = (p: ProductLike | null | undefined, lang: Lang): Pro
   const alt = lang === "ar" ? asSpecs(p.specs_en) : asSpecs(p.specs_ar);
   if (alt.length) return alt;
   return asSpecs(p.specs);
+};
+
+export const productHighlights = (p: ProductLike | null | undefined, lang: Lang): string[] => {
+  if (!p) return [];
+  const ar = (p.highlights_ar || []).filter(Boolean);
+  const en = (p.highlights_en || []).filter(Boolean);
+  const legacy = (p.highlights || []).filter(Boolean);
+  const primary = lang === "ar" ? ar : en;
+  if (primary.length) return primary;
+  const alt = lang === "ar" ? en : ar;
+  if (alt.length) return alt;
+  return legacy;
 };

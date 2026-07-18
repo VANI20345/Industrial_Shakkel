@@ -11,25 +11,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Plus, Pencil, Search, Loader2, Image as ImageIcon, FileText, Trash2, Download } from "lucide-react";
+import { Plus, Pencil, Search, Loader2, Image as ImageIcon, FileText, Trash2, Download, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadToBucket } from "@/lib/storage";
 import { ProductImagesEditor, PendingImagesPicker } from "@/components/admin/ProductImagesEditor";
 import { ProductDocumentsEditor, PendingDocumentsPicker, stripExt } from "@/components/admin/ProductDocumentsEditor";
-import { HighlightsEditor, SpecsEditor, type Spec } from "@/components/admin/ProductDetailsEditor";
+import { HighlightsEditor, SpecsEditor, AdminLinksEditor, type Spec, type AdminLink } from "@/components/admin/ProductDetailsEditor";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { exportXlsx } from "@/lib/reports";
 
 type Brand = { id: string; name: string };
-type Cat = { id: string; name: string };
+type Cat = { id: string; name: string; name_ar: string | null; name_en: string | null; parent_id: string | null };
 type Product = {
   id: string; code: string;
   name: string; name_ar: string | null; name_en: string | null;
   description: string | null; description_ar: string | null; description_en: string | null;
   long_description: string | null; long_description_ar: string | null; long_description_en: string | null;
-  highlights: string[]; specs: any; specs_ar: any; specs_en: any;
+  highlights: string[]; highlights_ar: string[] | null; highlights_en: string[] | null;
+  specs: any; specs_ar: any; specs_en: any;
   shakkel_ref: string | null;
   brand_id: string | null; category_id: string | null;
   unit: string; min_order_qty: number; stock_qty: number;
@@ -39,6 +40,7 @@ type Product = {
   brands?: { name: string } | null;
   product_images?: { image_url: string; sort_order: number }[];
   product_documents?: { file_url: string; file_name: string; sort_order: number }[];
+  admin_links?: any;
 };
 
 const emptyForm = {
@@ -51,16 +53,20 @@ const emptyForm = {
   low_stock_threshold: 10,
   is_active: true, datasheet_url: "",
   shakkel_ref: "",
-  highlights: [] as string[],
+  highlights_ar: [] as string[],
+  highlights_en: [] as string[],
   specs_ar: [] as Spec[],
   specs_en: [] as Spec[],
+  admin_links: [] as AdminLink[],
 };
 
 const AdminProducts = () => {
-  const { t, lang } = useI18n();
+  const { t, lang, dir } = useI18n();
   const [rows, setRows] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
+  const [selectedMainCat, setSelectedMainCat] = useState("");
+  const [selectedSubCat, setSelectedSubCat] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -94,11 +100,16 @@ const AdminProducts = () => {
   const imageUrls = (p: Product) =>
     (p.product_images || []).slice().sort((a, b) => a.sort_order - b.sort_order).map((i) => i.image_url).join(" | ");
 
+  const getCatName = (c?: Cat | null) => {
+    if (!c) return "—";
+    return (lang === "ar" ? c.name_ar : c.name_en) || c.name;
+  };
+
   const exportCsv = () => {
     const headers = ["code", "shakkel_ref", "name", "brand", "category", "unit", "min_order_qty", "stock_qty", "low_stock_threshold", "is_active", "datasheet_url", "image_urls", "description"];
     const data = filtered.map((p) => [
       p.code, p.shakkel_ref || "", p.name, p.brands?.name || "",
-      cats.find((c) => c.id === p.category_id)?.name || "",
+      getCatName(cats.find((c) => c.id === p.category_id)),
       p.unit, p.min_order_qty, p.stock_qty, p.low_stock_threshold,
       p.is_active, docUrls(p), imageUrls(p), p.description || "",
     ]);
@@ -110,7 +121,7 @@ const AdminProducts = () => {
     const [p, b, c] = await Promise.all([
       supabase.from("products").select("*, brands(name), product_images(image_url,sort_order), product_documents(file_url,file_name,sort_order)").order("created_at", { ascending: false }),
       supabase.from("brands").select("id,name").order("name"),
-      supabase.from("categories").select("id,name").order("name"),
+      supabase.from("categories").select("id,name,name_ar,name_en,parent_id").order("name"),
     ]);
     setRows(((p.data as any) || []) as Product[]);
     setBrands((b.data as Brand[]) || []);
@@ -119,8 +130,28 @@ const AdminProducts = () => {
   };
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm(emptyForm); setPendingImages([]); setPendingDocs([]); setOpen(true); };
+  const openNew = () => {
+    setForm(emptyForm);
+    setSelectedMainCat("");
+    setSelectedSubCat("");
+    setPendingImages([]);
+    setPendingDocs([]);
+    setOpen(true);
+  };
   const openEdit = (p: Product) => {
+    const matched = cats.find((c) => c.id === p.category_id);
+    if (matched) {
+      if (matched.parent_id) {
+        setSelectedMainCat(matched.parent_id);
+        setSelectedSubCat(matched.id);
+      } else {
+        setSelectedMainCat(matched.id);
+        setSelectedSubCat("");
+      }
+    } else {
+      setSelectedMainCat("");
+      setSelectedSubCat("");
+    }
     setForm({
       id: p.id, code: p.code,
       name_ar: p.name_ar || p.name || "",
@@ -134,12 +165,19 @@ const AdminProducts = () => {
       low_stock_threshold: p.low_stock_threshold,
       is_active: p.is_active, datasheet_url: p.datasheet_url || "",
       shakkel_ref: p.shakkel_ref || "",
-      highlights: Array.isArray(p.highlights) ? p.highlights : [],
+      highlights_ar: Array.isArray(p.highlights_ar) && p.highlights_ar.length ? p.highlights_ar : (Array.isArray(p.highlights) ? p.highlights : []),
+      highlights_en: Array.isArray(p.highlights_en) && p.highlights_en.length ? p.highlights_en : (Array.isArray(p.highlights) ? p.highlights : []),
       specs_ar: Array.isArray(p.specs_ar) && p.specs_ar.length ? (p.specs_ar as Spec[]) : (Array.isArray(p.specs) ? (p.specs as Spec[]) : []),
       specs_en: Array.isArray(p.specs_en) && p.specs_en.length ? (p.specs_en as Spec[]) : (Array.isArray(p.specs) ? (p.specs as Spec[]) : []),
+      admin_links: Array.isArray(p.admin_links) ? p.admin_links : [],
     });
     setPendingImages([]); setPendingDocs([]);
     setOpen(true);
+  };
+
+  const openDuplicate = (p: Product) => {
+    openEdit(p);
+    setForm(f => ({ ...f, id: "", code: p.code + "-copy", shakkel_ref: "" }));
   };
 
   const toggleActive = async (p: Product) => {
@@ -158,7 +196,9 @@ const AdminProducts = () => {
 
     setSaving(true);
     try {
-      const cleanedHighlights = form.highlights.map((h) => h.trim()).filter(Boolean).slice(0, 12);
+      const clean = (a: string[]) => a.map((h) => h.trim()).filter(Boolean).slice(0, 12);
+      const cleanedHighlightsAr = clean(form.highlights_ar);
+      const cleanedHighlightsEn = clean(form.highlights_en);
       const cleanSpecs = (arr: Spec[]) => arr
         .map((s) => ({ label: s.label.trim(), value: s.value.trim() }))
         .filter((s) => s.label || s.value);
@@ -186,9 +226,12 @@ const AdminProducts = () => {
         long_description_en: longEn || null,
         specs_ar: cleanedSpecsAr,
         specs_en: cleanedSpecsEn,
-        highlights: cleanedHighlights,
+        highlights: cleanedHighlightsAr.length ? cleanedHighlightsAr : cleanedHighlightsEn,
+        highlights_ar: cleanedHighlightsAr,
+        highlights_en: cleanedHighlightsEn,
+        admin_links: form.admin_links || [],
         brand_id: form.brand_id || null,
-        category_id: form.category_id || null,
+        category_id: selectedSubCat || selectedMainCat || null,
         unit: form.unit.trim() || "pcs",
         min_order_qty: Number(form.min_order_qty) || 1,
         stock_qty: Number(form.stock_qty) || 0,
@@ -281,7 +324,7 @@ const AdminProducts = () => {
             name: "Products",
             rows: filtered.map((p) => ({
               code: p.code, shakkel_ref: p.shakkel_ref || "", name: p.name, brand: p.brands?.name || "",
-              category: cats.find((c) => c.id === p.category_id)?.name || "",
+              category: getCatName(cats.find((c) => c.id === p.category_id)),
               unit: p.unit, min_order_qty: p.min_order_qty, stock_qty: p.stock_qty,
               low_stock_threshold: p.low_stock_threshold, is_active: p.is_active,
               datasheet_url: docUrls(p), image_urls: imageUrls(p), description: p.description || "",
@@ -337,8 +380,9 @@ const AdminProducts = () => {
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1 items-center">
                           <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setToDelete(p)}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDuplicate(p)} title={lang === "ar" ? "تكرار" : "Duplicate"}><Copy className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} title={lang === "ar" ? "تعديل" : "Edit"}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setToDelete(p)} title={lang === "ar" ? "حذف" : "Delete"}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -352,16 +396,17 @@ const AdminProducts = () => {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto" dir={dir}>
           <DialogHeader><DialogTitle>{form.id ? t.admin.edit : t.admin.addProduct}</DialogTitle></DialogHeader>
 
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid grid-cols-5 w-full">
+          <Tabs defaultValue="basic" className="w-full" dir={dir}>
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="basic">{lang === "ar" ? "أساسي" : "Basic"}</TabsTrigger>
               <TabsTrigger value="images">{lang === "ar" ? "الصور" : "Images"}</TabsTrigger>
-              <TabsTrigger value="docs">{lang === "ar" ? "المستندات" : "Documents"}</TabsTrigger>
+              <TabsTrigger value="docs">{lang === "ar" ? "الداتا شيت" : "Datasheet"}</TabsTrigger>
               <TabsTrigger value="details">{lang === "ar" ? "التفاصيل" : "Details"}</TabsTrigger>
               <TabsTrigger value="specs">{lang === "ar" ? "المواصفات" : "Specs"}</TabsTrigger>
+              <TabsTrigger value="links">{lang === "ar" ? "روابط" : "Links"}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="mt-4">
@@ -389,12 +434,54 @@ const AdminProducts = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>{t.products.category}</Label>
-                  <Select value={form.category_id || "none"} onValueChange={(v) => setForm({ ...form, category_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="none">—</SelectItem>{cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  <Label>{lang === "ar" ? "التصنيف الرئيسي" : "Main Category"}</Label>
+                  <Select
+                    value={selectedMainCat || "none"}
+                    onValueChange={(v) => {
+                      const val = v === "none" ? "" : v;
+                      setSelectedMainCat(val);
+                      setSelectedSubCat(""); // Reset subcategory when main changes
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={lang === "ar" ? "اختر تصنيفاً رئيسياً" : "Select main category"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      {cats
+                        .filter((c) => !c.parent_id)
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {(lang === "ar" ? c.name_ar : c.name_en) || c.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                 </div>
+
+                {selectedMainCat && cats.some((c) => c.parent_id === selectedMainCat) && (
+                  <div>
+                    <Label>{lang === "ar" ? "التصنيف الفرعي" : "Subcategory"}</Label>
+                    <Select
+                      value={selectedSubCat || "none"}
+                      onValueChange={(v) => setSelectedSubCat(v === "none" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={lang === "ar" ? "اختر تصنيفاً فرعياً" : "Select subcategory"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        {cats
+                          .filter((c) => c.parent_id === selectedMainCat)
+                          .map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {(lang === "ar" ? c.name_ar : c.name_en) || c.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div><Label>{t.products.unit}</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
                 <div><Label>{t.products.moq}</Label><Input type="number" min={1} value={form.min_order_qty} onChange={(e) => setForm({ ...form, min_order_qty: Number(e.target.value) })} /></div>
                 <div><Label>{t.products.stock}</Label><Input type="number" min={0} value={form.stock_qty} onChange={(e) => setForm({ ...form, stock_qty: Number(e.target.value) })} /></div>
@@ -425,48 +512,53 @@ const AdminProducts = () => {
             </TabsContent>
 
             <TabsContent value="details" className="mt-4 space-y-5">
-              <HighlightsEditor value={form.highlights} onChange={(h) => setForm({ ...form, highlights: h })} lang={lang} />
-              <Tabs defaultValue="ar" className="w-full">
+              <Tabs defaultValue="ar" className="w-full" dir={dir}>
                 <TabsList className="grid grid-cols-2 w-full max-w-xs">
                   <TabsTrigger value="ar">العربية</TabsTrigger>
                   <TabsTrigger value="en">English</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ar" className="mt-3 space-y-4" dir="rtl">
                   <div>
-                    <Label>ملخص قصير</Label>
-                    <Textarea value={form.description_ar} onChange={(e) => setForm({ ...form, description_ar: e.target.value })} rows={3} maxLength={500} />
+                    <Label>ملخص قصير (عربي)</Label>
+                    <Textarea dir="rtl" value={form.description_ar} onChange={(e) => setForm({ ...form, description_ar: e.target.value })} rows={3} maxLength={500} />
                   </div>
                   <div>
-                    <Label>الوصف الطويل (اختياري)</Label>
-                    <Textarea value={form.long_description_ar} onChange={(e) => setForm({ ...form, long_description_ar: e.target.value })} rows={6} maxLength={5000} />
+                    <Label>الوصف الطويل (عربي - اختياري)</Label>
+                    <Textarea dir="rtl" value={form.long_description_ar} onChange={(e) => setForm({ ...form, long_description_ar: e.target.value })} rows={6} maxLength={5000} />
                   </div>
+                  <HighlightsEditor value={form.highlights_ar} onChange={(h) => setForm({ ...form, highlights_ar: h })} lang="ar" />
                 </TabsContent>
                 <TabsContent value="en" className="mt-3 space-y-4" dir="ltr">
                   <div>
-                    <Label>Summary</Label>
-                    <Textarea value={form.description_en} onChange={(e) => setForm({ ...form, description_en: e.target.value })} rows={3} maxLength={500} />
+                    <Label>Summary (English)</Label>
+                    <Textarea dir="ltr" value={form.description_en} onChange={(e) => setForm({ ...form, description_en: e.target.value })} rows={3} maxLength={500} />
                   </div>
                   <div>
-                    <Label>Long description (optional)</Label>
-                    <Textarea value={form.long_description_en} onChange={(e) => setForm({ ...form, long_description_en: e.target.value })} rows={6} maxLength={5000} />
+                    <Label>Long description (English - optional)</Label>
+                    <Textarea dir="ltr" value={form.long_description_en} onChange={(e) => setForm({ ...form, long_description_en: e.target.value })} rows={6} maxLength={5000} />
                   </div>
+                  <HighlightsEditor value={form.highlights_en} onChange={(h) => setForm({ ...form, highlights_en: h })} lang="en" />
                 </TabsContent>
               </Tabs>
             </TabsContent>
 
             <TabsContent value="specs" className="mt-4">
-              <Tabs defaultValue="ar" className="w-full">
+              <Tabs defaultValue="ar" className="w-full" dir={dir}>
                 <TabsList className="grid grid-cols-2 w-full max-w-xs">
                   <TabsTrigger value="ar">العربية</TabsTrigger>
                   <TabsTrigger value="en">English</TabsTrigger>
                 </TabsList>
-                <TabsContent value="ar" className="mt-3" dir="rtl">
+                <TabsContent value="ar" className="mt-3" dir="ltr">
                   <SpecsEditor value={form.specs_ar} onChange={(s) => setForm({ ...form, specs_ar: s })} lang="ar" />
                 </TabsContent>
                 <TabsContent value="en" className="mt-3" dir="ltr">
                   <SpecsEditor value={form.specs_en} onChange={(s) => setForm({ ...form, specs_en: s })} lang="en" />
                 </TabsContent>
               </Tabs>
+            </TabsContent>
+
+            <TabsContent value="links" className="mt-4">
+              <AdminLinksEditor value={form.admin_links} onChange={(l) => setForm({ ...form, admin_links: l })} />
             </TabsContent>
           </Tabs>
 

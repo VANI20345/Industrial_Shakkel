@@ -393,6 +393,8 @@ export type Database = {
           description_ar: string | null
           description_en: string | null
           highlights: string[]
+          highlights_ar: string[]
+          highlights_en: string[]
           id: string
           is_active: boolean
           long_description: string | null
@@ -422,6 +424,8 @@ export type Database = {
           description_ar?: string | null
           description_en?: string | null
           highlights?: string[]
+          highlights_ar?: string[]
+          highlights_en?: string[]
           id?: string
           is_active?: boolean
           long_description?: string | null
@@ -451,6 +455,8 @@ export type Database = {
           description_ar?: string | null
           description_en?: string | null
           highlights?: string[]
+          highlights_ar?: string[]
+          highlights_en?: string[]
           id?: string
           is_active?: boolean
           long_description?: string | null

@@ -14,7 +14,7 @@ import { useProduct, productPrimaryImage, stockState } from "@/hooks/useCatalog"
 import { Seo } from "@/components/Seo";
 import { ProductGallery } from "@/components/ProductGallery";
 import { docIcon } from "@/components/admin/ProductDocumentsEditor";
-import { productName, productDescription, productLongDescription, productSpecs } from "@/lib/i18nProduct";
+import { productName, productDescription, productLongDescription, productSpecs, productHighlights } from "@/lib/i18nProduct";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -32,7 +32,7 @@ const ProductDetails = () => {
   const status = stockState(product);
   const mainImg = productPrimaryImage(product);
   const docs = (product.product_documents || []).slice().sort((a, b) => a.sort_order - b.sort_order);
-  const highlights = (product.highlights || []).filter(Boolean);
+  const highlights = productHighlights(product, lang);
   const name = productName(product, lang);
   const desc = productDescription(product, lang);
   const longDesc = productLongDescription(product, lang);
@@ -68,6 +68,16 @@ const ProductDetails = () => {
     },
   };
 
+  const flashScroll = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    window.setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    }, 1500);
+  };
+
   return (
     <SiteLayout>
       <Seo
@@ -79,11 +89,29 @@ const ProductDetails = () => {
         jsonLd={jsonLd}
       />
       <div className="container-page py-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4">
           <ChevronLeft className={`h-4 w-4 me-1 ${dir === "rtl" ? "rotate-180" : ""}`} /> {t.common.back}
         </Button>
 
-        <div className="grid lg:grid-cols-2 gap-10">
+        {/* In-page tab navigation */}
+        <div className="sticky top-16 z-30 -mx-4 px-4 mb-6 bg-background/80 backdrop-blur border-b border-border">
+          <div className="flex gap-1 overflow-x-auto py-2">
+            <Button variant="ghost" size="sm" onClick={() => flashScroll("section-product")}>
+              {t.products.tabProduct}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => flashScroll("section-details")}>
+              {t.products.tabDetails}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => flashScroll("section-specs")}>
+              {t.products.tabSpecs}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => flashScroll("section-datasheet")}>
+              {t.products.tabDatasheet}
+            </Button>
+          </div>
+        </div>
+
+        <div id="section-product" className="grid lg:grid-cols-2 gap-10 scroll-mt-32 rounded-lg transition-shadow">
           <ProductGallery images={product.product_images || []} alt={name} />
 
           <div className="flex flex-col">
@@ -123,38 +151,12 @@ const ProductDetails = () => {
                 <Check className="h-4 w-4 me-2" /> {t.products.addToQuote}
               </Button>
             </div>
-
-            {/* Documents */}
-            {docs.length > 0 ? (
-              <div className="mt-5 space-y-2">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{lang === "ar" ? "المستندات" : "Documents"}</h2>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {docs.map((d) => {
-                    const Icon = docIcon(d.mime_type);
-                    return (
-                      <a key={d.id} href={d.file_url} target="_blank" rel="noreferrer"
-                         className="flex items-center gap-3 border border-border rounded-lg p-3 hover:border-primary hover:bg-secondary/30 transition-base">
-                        <Icon className="h-6 w-6 text-primary shrink-0" />
-                        <span className="flex-1 text-sm font-medium truncate">{d.file_name}</span>
-                        <Download className="h-4 w-4 text-muted-foreground" />
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : product.datasheet_url ? (
-              <Button asChild variant="outline" size="lg" className="mt-3 w-full">
-                <a href={product.datasheet_url} target="_blank" rel="noreferrer">
-                  <FileText className="h-4 w-4 me-2" /> {t.products.downloadDatasheet}
-                </a>
-              </Button>
-            ) : null}
           </div>
         </div>
 
-        {/* Details container */}
+        {/* Highlights + long description */}
         {(highlights.length > 0 || longDesc) && (
-          <Card className="mt-12 p-6 md:p-8">
+          <Card id="section-details" className="mt-12 p-6 md:p-8 scroll-mt-32 transition-shadow">
             <h2 className="text-2xl font-extrabold mb-5">{lang === "ar" ? "تفاصيل المنتج" : "Product Details"}</h2>
             {highlights.length > 0 && (
               <div className="mb-6">
@@ -179,9 +181,9 @@ const ProductDetails = () => {
         )}
 
         {/* Specifications */}
-        {specs.length > 0 && (
-          <Card className="mt-8 p-6 md:p-8 overflow-hidden">
-            <h2 className="text-2xl font-extrabold mb-5">{lang === "ar" ? "المواصفات" : "Specifications"}</h2>
+        <Card id="section-specs" className="mt-8 p-6 md:p-8 overflow-hidden scroll-mt-32 transition-shadow">
+          <h2 className="text-2xl font-extrabold mb-5">{t.products.tabSpecs}</h2>
+          {specs.length > 0 ? (
             <div className="overflow-x-auto -mx-6 md:-mx-8">
               <table className="w-full text-sm">
                 <tbody>
@@ -194,8 +196,38 @@ const ProductDetails = () => {
                 </tbody>
               </table>
             </div>
-          </Card>
-        )}
+          ) : (
+            <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد مواصفات مضافة." : "No specifications added."}</p>
+          )}
+        </Card>
+
+        {/* Datasheet section */}
+        <Card id="section-datasheet" className="mt-8 p-6 md:p-8 scroll-mt-32 transition-shadow">
+          <h2 className="text-2xl font-extrabold mb-5">{t.products.tabDatasheet}</h2>
+          {docs.length > 0 ? (
+            <div className="grid sm:grid-cols-2 gap-2">
+              {docs.map((d) => {
+                const Icon = docIcon(d.mime_type);
+                return (
+                  <a key={d.id} href={d.file_url} target="_blank" rel="noreferrer"
+                     className="flex items-center gap-3 border border-border rounded-lg p-3 hover:border-primary hover:bg-secondary/30 transition-base">
+                    <Icon className="h-6 w-6 text-primary shrink-0" />
+                    <span className="flex-1 text-sm font-medium truncate">{d.file_name}</span>
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                  </a>
+                );
+              })}
+            </div>
+          ) : product.datasheet_url ? (
+            <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+              <a href={product.datasheet_url} target="_blank" rel="noreferrer">
+                <FileText className="h-4 w-4 me-2" /> {t.products.downloadDatasheet}
+              </a>
+            </Button>
+          ) : (
+            <p className="text-muted-foreground text-sm">{t.products.noDatasheet}</p>
+          )}
+        </Card>
       </div>
     </SiteLayout>
   );
