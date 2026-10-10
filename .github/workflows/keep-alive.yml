@@ -14,6 +14,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl -sf "${SUPABASE_URL}/rest/v1/cities?select=id&limit=1" \
-          -H "apikey: ${SUPABASE_ANON_KEY}" \
-          -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+          CLEAN_URL=$(echo "$SUPABASE_URL" | tr -d ' \r\n"' | tr -d "'")
+          CLEAN_KEY=$(echo "$SUPABASE_ANON_KEY" | tr -d ' \r\n"' | tr -d "'")
+          curl -sf "${CLEAN_URL}/rest/v1/cities?select=id&limit=1" \
+          -H "apikey: ${CLEAN_KEY}" \
+          -H "Authorization: Bearer ${CLEAN_KEY}"
